@@ -1,10 +1,17 @@
 package com.rodrigoja.randomuser.view.ui
 
+import android.app.SearchManager
+import android.content.Context
 import android.content.Intent
+import android.database.MatrixCursor
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.provider.BaseColumns
+import android.view.Menu
+import android.view.MenuInflater
 import android.view.View
 import androidx.activity.viewModels
+import androidx.appcompat.widget.SearchView
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.GridLayoutManager
@@ -13,8 +20,10 @@ import androidx.recyclerview.widget.RecyclerView
 import com.rodrigoja.randomuser.R
 import com.rodrigoja.randomuser.di.DaggerAppComponent
 import com.rodrigoja.randomuser.internal.USER
+import com.rodrigoja.randomuser.model.User
 import com.rodrigoja.randomuser.utils.EndLessRecyclerViewScrollListener
 import com.rodrigoja.randomuser.view.adapter.FavoriteViewHolderAdapter
+import com.rodrigoja.randomuser.view.adapter.SuggestionAdapter
 import com.rodrigoja.randomuser.view.adapter.UserViewHolderAdapter
 import com.rodrigoja.randomuser.viewmodel.UserViewModel
 import kotlinx.android.synthetic.main.activity_main.*
@@ -27,9 +36,13 @@ class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var favoriteAdapter: FavoriteViewHolderAdapter
 
+    private var suggestionAdapter: SuggestionAdapter? = null
+
     private var scrollListener: EndLessRecyclerViewScrollListener? = null
 
     private val viewModel: UserViewModel by viewModels()
+
+    private var cacheUsers: ArrayList<User> = ArrayList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,6 +56,7 @@ class MainActivity : AppCompatActivity() {
 
         observeLiveData()
 
+        setUpSuggestionView()
     }
 
     private fun setUpUsersRecyclerView(){
@@ -68,9 +82,7 @@ class MainActivity : AppCompatActivity() {
         rvUsers.addOnScrollListener(scrollListener!!)
 
         userAdapter.callback = {
-            val intent = Intent(this, DetailActivity::class.java)
-            intent.putExtra(USER, it)
-            startActivity(intent)
+            goToDetail(it)
         }
 
         fetchUsers()
@@ -91,9 +103,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         favoriteAdapter.callback = {
-            val intent = Intent(this, DetailActivity::class.java)
-            intent.putExtra(USER, it)
-            startActivity(intent)
+            goToDetail(it)
         }
 
         viewModel.getFavorites()
@@ -146,6 +156,8 @@ class MainActivity : AppCompatActivity() {
             users.let {
                 if (it != null && it.isNotEmpty()){
                     userAdapter.addData(it)
+                    cacheUsers.clear()
+                    cacheUsers.addAll(it)
                     fetch_progress.visibility = View.VISIBLE
                     rvUsers.visibility = View.VISIBLE
                     empty_text.visibility = View.GONE
@@ -178,5 +190,75 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         viewModel.getFavorites()
+    }
+
+    private fun setUpSuggestionView(){
+        suggestionAdapter = SuggestionAdapter(this@MainActivity, null, false)
+        suggestionAdapter?.callback = {
+            for (item in cacheUsers){
+                if (item.email == it){
+                    goToDetail(item)
+                    break
+                }
+            }
+        }
+    }
+
+    private fun goToDetail(user: User){
+        val intent = Intent(this, DetailActivity::class.java)
+        intent.putExtra(USER, user)
+        startActivity(intent)
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        val menuInf: MenuInflater = menuInflater
+        menuInf.inflate(R.menu.menu_main_activity, menu)
+
+        val searchItem = menu?.findItem(R.id.action_search)
+        var searchManager: SearchManager? = applicationContext.getSystemService(Context.SEARCH_SERVICE) as SearchManager?
+
+        searchItem?.let {
+            val searchView = it.actionView as SearchView
+            searchView?.let {
+                sView ->
+                sView.setSearchableInfo(searchManager?.getSearchableInfo(this@MainActivity.componentName))
+                sView.setOnQueryTextListener(object : SearchView.OnQueryTextListener{
+                    override fun onQueryTextSubmit(query: String?): Boolean {
+                        return true
+                    }
+
+                    override fun onQueryTextChange(newText: String?): Boolean {
+                        newText?.let {
+                            createCursor(it)
+                        }
+                        return false
+                    }
+                })
+                sView.suggestionsAdapter = suggestionAdapter
+            }
+        }
+        return super.onCreateOptionsMenu(menu)
+    }
+
+    private fun createCursor(s: String){
+        val cursor = MatrixCursor(arrayOf(BaseColumns._ID, "name", "email"))
+        var tempList: ArrayList<User> = ArrayList()
+        for (item in cacheUsers){
+            if (item.name.first.contains(s, true)
+                    || item.name.last.contains(s, true)){
+                tempList.add(item)
+            }
+        }
+
+        for ((index, item) in tempList.withIndex()){
+            val fullName = "${item.name.first} ${item.name.last}"
+            val row = arrayOf(
+                    index.toString(),
+                    fullName,
+                    item.email
+            )
+            cursor.addRow(row)
+        }
+        suggestionAdapter?.changeCursor(cursor)
     }
 }

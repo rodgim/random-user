@@ -14,6 +14,6 @@ interface UserDao {
     @Query("SELECT * from user")
     fun queryUser(): Single<List<UserEntity>>
 
-    @Query("SELECT * FROM user WHERE idUser == :userId LIMIT 1")
-    fun getUser(userId: String): Single<List<UserEntity>>
+    @Query("SELECT * FROM user WHERE email == :email LIMIT 1")
+    fun getUser(email: String): Single<List<UserEntity>>
 }

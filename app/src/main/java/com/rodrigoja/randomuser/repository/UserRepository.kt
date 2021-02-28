@@ -33,8 +33,8 @@ class UserRepository {
         }
     }
 
-    fun getUser(userId: String): Single<List<UserEntity>>{
-        return UserApplication.database.userDao().getUser(userId)
+    fun getUser(email: String): Single<List<UserEntity>>{
+        return UserApplication.database.userDao().getUser(email)
     }
 
     fun deleteUser(user: UserEntity): Single<Int>{

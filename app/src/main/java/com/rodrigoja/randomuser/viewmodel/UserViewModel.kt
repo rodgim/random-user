@@ -107,7 +107,7 @@ class UserViewModel: ViewModel() {
                         .subscribe({
                             id ->
                             if (id > 0){
-                                getUser("${user.id.name}-${user.id.value}")
+                                getUser(user.email)
                             }else{
                                 _userEntity.postValue(null)
                             }
@@ -117,9 +117,9 @@ class UserViewModel: ViewModel() {
         )
     }
 
-    fun getUser(userId: String){
+    fun getUser(email: String){
         compositeDisposable.add(
-                repository.getUser(userId)
+                repository.getUser(email)
                         .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe({

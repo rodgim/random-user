@@ -97,7 +97,7 @@ class DetailActivity: AppCompatActivity() {
     }
 
     private fun checkUser(){
-        viewModel.getUser("${user?.id?.name}-${user?.id?.value}")
+        viewModel.getUser(user!!.email)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

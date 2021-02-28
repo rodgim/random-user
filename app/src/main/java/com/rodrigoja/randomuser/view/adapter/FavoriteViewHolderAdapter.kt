@@ -32,6 +32,7 @@ class FavoriteViewHolderAdapter(private val users: ArrayList<User>): RecyclerVie
     }
 
     fun addData(list: List<User>){
+        users.clear()
         users.addAll(list)
         notifyDataSetChanged()
     }
