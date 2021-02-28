@@ -22,6 +22,7 @@ fun setImageUrlCircle(imageView: ImageView, url: String?){
     url?.let {
         GlideApp.with(imageView.context)
                 .load(it)
+                .circleCrop()
                 .into(imageView)
     }
 }

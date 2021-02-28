@@ -3,6 +3,7 @@ package com.rodrigoja.randomuser.viewmodel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.rodrigoja.randomuser.data.database.UserEntity
 import com.rodrigoja.randomuser.data.database.toUserList
 import com.rodrigoja.randomuser.di.DaggerAppComponent
 import com.rodrigoja.randomuser.model.User
@@ -33,18 +34,20 @@ class UserViewModel: ViewModel() {
     val isError: LiveData<Boolean>
         get() = _isError
 
-    private val _idUserSaved by lazy { MutableLiveData<Long>() }
-    val idUserSaved: LiveData<Long>
-        get() = _idUserSaved
+    private val _userEntity by lazy { MutableLiveData<UserEntity?>() }
+    val userEntity: LiveData<UserEntity?>
+        get() = _userEntity
 
     private val _favorites by lazy { MutableLiveData<List<User>>() }
     val favorites: LiveData<List<User>>
         get() = _favorites
 
+    private val _deleteUser by lazy { MutableLiveData<Int>() }
+    val deleteUser: LiveData<Int>
+        get() = _deleteUser
+
     init {
         DaggerAppComponent.create().inject(this)
-        onGetUsers()
-        getFavorites()
     }
 
     override fun onCleared() {
@@ -77,7 +80,7 @@ class UserViewModel: ViewModel() {
         page++
     }
 
-    private fun getFavorites(){
+    fun getFavorites(){
         compositeDisposable.add(
                 repository.getFavorites()
                         .subscribeOn(Schedulers.io())
@@ -103,9 +106,50 @@ class UserViewModel: ViewModel() {
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe({
                             id ->
-                            _idUserSaved.postValue(id)
+                            if (id > 0){
+                                getUser("${user.id.name}-${user.id.value}")
+                            }else{
+                                _userEntity.postValue(null)
+                            }
                         },{
-                            _idUserSaved.postValue(0)
+                            _userEntity.postValue(null)
+                        })
+        )
+    }
+
+    fun getUser(userId: String){
+        compositeDisposable.add(
+                repository.getUser(userId)
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe({
+                            userList ->
+                            if (userList != null && userList.isNotEmpty()){
+                                _userEntity.postValue(userList[0])
+                            }else{
+                                _userEntity.postValue(null)
+                            }
+                        }, {
+                            throwable ->
+                            _userEntity.postValue(null)
+                        })
+        )
+    }
+
+    fun deleteUser(user: UserEntity){
+        compositeDisposable.add(
+                repository.deleteUser(user)
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe({
+                            id ->
+                            if (id > 0){
+                                _userEntity.postValue(null)
+                            }else{
+                                _deleteUser.postValue(0)
+                            }
+                        },{
+                            _deleteUser.postValue(0)
                         })
         )
     }

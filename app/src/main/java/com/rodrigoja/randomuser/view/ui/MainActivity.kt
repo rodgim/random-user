@@ -1,5 +1,6 @@
 package com.rodrigoja.randomuser.view.ui
 
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
@@ -8,8 +9,11 @@ import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.rodrigoja.randomuser.R
 import com.rodrigoja.randomuser.di.DaggerAppComponent
+import com.rodrigoja.randomuser.internal.USER
+import com.rodrigoja.randomuser.utils.EndLessRecyclerViewScrollListener
 import com.rodrigoja.randomuser.view.adapter.FavoriteViewHolderAdapter
 import com.rodrigoja.randomuser.view.adapter.UserViewHolderAdapter
 import com.rodrigoja.randomuser.viewmodel.UserViewModel
@@ -22,6 +26,8 @@ class MainActivity : AppCompatActivity() {
 
     @Inject
     lateinit var favoriteAdapter: FavoriteViewHolderAdapter
+
+    private var scrollListener: EndLessRecyclerViewScrollListener? = null
 
     private val viewModel: UserViewModel by viewModels()
 
@@ -36,6 +42,7 @@ class MainActivity : AppCompatActivity() {
         setUpFavoritRecyclerView()
 
         observeLiveData()
+
     }
 
     private fun setUpUsersRecyclerView(){
@@ -52,9 +59,21 @@ class MainActivity : AppCompatActivity() {
             layoutManager = layoutGridLayoutManager
         }
 
-        userAdapter.callback = {
-
+        scrollListener = object : EndLessRecyclerViewScrollListener(layoutGridLayoutManager){
+            override fun onLoadMore(page: Int, totalItemsCount: Int, view: RecyclerView?) {
+                fetchUsers()
+            }
         }
+
+        rvUsers.addOnScrollListener(scrollListener!!)
+
+        userAdapter.callback = {
+            val intent = Intent(this, DetailActivity::class.java)
+            intent.putExtra(USER, it)
+            startActivity(intent)
+        }
+
+        fetchUsers()
     }
 
     private fun setUpFavoritRecyclerView(){
@@ -72,8 +91,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         favoriteAdapter.callback = {
-
+            val intent = Intent(this, DetailActivity::class.java)
+            intent.putExtra(USER, it)
+            startActivity(intent)
         }
+
+        viewModel.getFavorites()
     }
 
     private fun observeLiveData(){
@@ -148,4 +171,12 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
+    private fun fetchUsers(){
+        viewModel.onGetUsers()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.getFavorites()
+    }
 }

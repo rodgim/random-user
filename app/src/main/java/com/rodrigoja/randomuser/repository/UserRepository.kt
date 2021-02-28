@@ -32,4 +32,14 @@ class UserRepository {
             UserApplication.database.userDao().insertUser(user.toDataEntity())
         }
     }
+
+    fun getUser(userId: String): Single<List<UserEntity>>{
+        return UserApplication.database.userDao().getUser(userId)
+    }
+
+    fun deleteUser(user: UserEntity): Single<Int>{
+        return Single.fromCallable {
+            UserApplication.database.userDao().deleteUser(user)
+        }
+    }
 }
